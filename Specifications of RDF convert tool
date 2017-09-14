@@ -1,0 +1,181 @@
+# Specifications-of-RDF-convert-tool
+Restriction
+- Please wite a program which generate RDF format data from XML format data with
+Ruby or Python.
+- You can use raptor library for writing/reading RDF data in both languages.
+Input
+- A data of ClinVar (https://www.ncbi.nlm.nih.gov/clinvar/)
+- You can download the XML file from:
+- ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/ClinVarFullRelease_2017-08.xml.gz
+- NOTE: You can find the XSD:
+- https://github.com/ncbi/clinvar/blob/master/xsd/clinvar_public.xsd
+Output
+- RDF file containing information described in original XML file
+- We are happy if we can choose the format from:
+- Turtle format
+- RDF/XML format
+- NTriples format
+- JSON/LD
+- ….
+RDF Schema
+- We do not want to spend time for determining the schema for this tools. Please use
+the following simple rules:
+a. Use “http://example.com/clinvar” as base URI.
+b. Use “http://example.com/clinvar/terms” as prefix for classes and properties
+you created.
+c. Use dcterms:identifier for representing attribues named “ID”.
+d. Create a new property with “clinvar” prefix for each attribute. Note that the
+name of property should begin with a lowercase letter.
+e. Do not output a RDF node for XML attributes.
+f. Create a new property which name begins with a lowercase letter for each
+XML element without child nodes.
+g. Do not output a RDF node for XML elements without child nodes.
+h. Create a new class for each XML element which have child nodes.
+i. Output a RDF node for each XML element which have child nodes.
+j. Create a new property which name begin with “has” for each child node which
+contains child nodes.
+- According to the rule a, b and c, the head of the output may starts as follow:
+@base <http://example.com/clinvar> .
+@prefix dcterms: <http://purl.org/dc/terms/>.
+@prefix clinvar: <http://example.com/clinvar/terms/> .
+- According to the rule c, d and e, when your tools read a XML such as:
+<Sample ID=”1” comment=”foo”> … </Sample>
+Your tool should generate RDF node named “ID00000001” for Sample element, a class
+named “Sample” and a property named “comment”, then output as follows:
+<ID00000001>
+a clinvar:Sample ;
+dcterms:identifier "1" ;
+clinvar:comment “foo” .
+- According to the rule f and g, when your tools read a XML such as:
+<SampleA>
+<SampleB>XYZ</SampleB>
+</SampleA>
+Your tool should generate a property named sampleB for SampleB element, then output as
+follows:
+<ID00000001>
+a clinvar:A ;
+clinvar:sampleB “XYZ”
+- According to the rule h, i and j, when your tools read a XML such as:
+<SampleA>
+<SampleB>
+<SampleC> ... </SampleC>
+</SampleB>
+</SampleA>
+Your tool should generate RDF node named ID00000001 and ID00000002 for SampleA and
+SmapleB and output as follows:
+<ID00000001>
+a clinvar:SampleA ;
+clinvar:hasSampleB <ID00000002> .
+<ID00000002>
+a clinvar:SampleB
+...
+Example
+- If your tool receive the following XML data:
+<ClinVarSet ID="10328633">
+<RecordStatus>current</RecordStatus>
+<Title>NM_000762.5(CYP2A6):c.479T&gt;A (p.Leu160His) AND Cyp2a6, v1</Title>
+<ClinVarAssertion ID="38766">
+<Assertion Type="X"/>
+</ClinVarAssertion>
+<ClinVarAssertion ID="38767">
+<Assertion Type="Y"/>
+</ClinVarAssertion>
+<ClinVarAssertion ID="38768">
+<Assertion Type="Y"/>
+</ClinVarAssertion>
+</ClinVarSet>
+- We expect your tool generates the RDF data as follows:
+------------ In Turtle Format ------------
+@base <http://example.com/clinvar> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix dcterms: <http://purl.org/dc/terms/>.
+@prefix clinvar: <http://example.com/clinvar/terms/> .
+<ID00000001>
+a clinvar:ClinVarSet ;
+dcterms:identifier "10328633" ;
+clinvar:recordStatus "current" ;
+clinvar:title "NM_000762.5(CYP2A6):c.479T&gt;A (p.Leu160His) AND Cyp2a6, v1" ;
+clinvar:hasClinVarAssertion <ID00000002> ;
+clinvar:hasClinVarAssertion <ID00000003> ;
+clinvar:hasClinVarAssertion <ID00000004> .
+<ID00000002>
+a clinvar:ClinVarAssertion ;
+dcterms:identifier "38766" .
+<ID00000003>
+a clinvar:ClinVarAssertion ;
+dcterms:identifier "38767" .
+<ID00000004>
+a clinvar:ClinVarAssertion ;
+dcterms:identifier "38768" .
+--------------------------------------------
+------------ In RDF+XML Format ------------
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:clinvar="http://example.com/clinvar/terms/"
+xmlns:dcterms="http://purl.org/dc/terms/"
+xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<rdf:Description rdf:about="http://example.com/ID00000001">
+<rdf:type rdf:resource="http://example.com/clinvar/terms/ClinVarSet"/>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000001">
+<dcterms:identifier>10328633</dcterms:identifier>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000001">
+<clinvar:recordStatus>current</clinvar:recordStatus>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000001">
+<clinvar:title>NM_000762.5(CYP2A6):c.479T&amp;gt;A (p.Leu160His) AND Cyp2a6,
+v1</clinvar:title>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000001">
+<clinvar:hasClinVarAssertion rdf:resource="http://example.com/ID00000002"/>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000001">
+<clinvar:hasClinVarAssertion rdf:resource="http://example.com/ID00000003"/>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000001">
+<clinvar:hasClinVarAssertion rdf:resource="http://example.com/ID00000004"/>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000002">
+<rdf:type rdf:resource="http://example.com/clinvar/terms/ClinVarAssertion"/>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000002">
+<dcterms:identifier>38766</dcterms:identifier>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000003">
+<rdf:type rdf:resource="http://example.com/clinvar/terms/ClinVarAssertion"/>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000003">
+<dcterms:identifier>38767</dcterms:identifier>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000004">
+<rdf:type rdf:resource="http://example.com/clinvar/terms/ClinVarAssertion"/>
+</rdf:Description>
+<rdf:Description rdf:about="http://example.com/ID00000004">
+<dcterms:identifier>38768</dcterms:identifier>
+</rdf:Description>
+</rdf:RDF>
+--------------------------------------------
+------------ In NTriples Format ------------
+<http://example.com/ID00000001> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+<http://example.com/clinvar/terms/ClinVarSet> .
+<http://example.com/ID00000001> <http://purl.org/dc/terms/identifier> "10328633" .
+<http://example.com/ID00000001> <http://example.com/clinvar/terms/recordStatus>
+"current" .
+<http://example.com/ID00000001> <http://example.com/clinvar/terms/title>
+"NM_000762.5(CYP2A6):c.479T&gt;A (p.Leu160His) AND Cyp2a6, v1" .
+<http://example.com/ID00000001> <http://example.com/clinvar/terms/hasClinVarAssertion>
+<http://example.com/ID00000002> .
+<http://example.com/ID00000001> <http://example.com/clinvar/terms/hasClinVarAssertion>
+<http://example.com/ID00000003> .
+<http://example.com/ID00000001> <http://example.com/clinvar/terms/hasClinVarAssertion>
+<http://example.com/ID00000004> .
+<http://example.com/ID00000002> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+<http://example.com/clinvar/terms/ClinVarAssertion> .
+<http://example.com/ID00000002> <http://purl.org/dc/terms/identifier> "38766" .
+<http://example.com/ID00000003> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+<http://example.com/clinvar/terms/ClinVarAssertion> .
+<http://example.com/ID00000003> <http://purl.org/dc/terms/identifier> "38767" .
+<http://example.com/ID00000004> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+<http://example.com/clinvar/terms/ClinVarAssertion> .
+<http://example.com/ID00000004> <http://purl.org/dc/terms/identifier> "38768" .
+--------------------------------------------
